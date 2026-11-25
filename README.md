@@ -1,25 +1,25 @@
-# ITRACKB4 - LA14
+# ITRACKB4 - LA15
 
-F1: Authentication and authorisation are not the same. In one sentence each: what did this lesson give you, and what is still missing next meeting?
+1. Your project answered one question last week and a second one this week. Name both questions, say which one your policy answers, and point at the file that answers the other.
 
-This lesson gave my movie app authentication, so it now knows who is asking through register, login and logout. What is still missing is authorisation, because any signed-in account can still add, edit and delete every movie, and next meeting we decide what each kind of user is allowed to do.
+Last week my movie app answered "Who are you?" through register and login, and this week it answers "What may you do?". My `MoviePolicy` answers the second one, and the first one is answered by `app/Http/Controllers/LoginController.php`, which uses `Auth::attempt` to check the email and password.
 
-F2: Why does a successful login call session()->regenerate()? What goes wrong if you skip it?
+2. role is not in your User model's $fillable, and yet you set it and saved it in Tinker. Explain why both of those are true, and say what $fillable is actually guarding you against.
 
-After login, Laravel gives me a new session id and throws away the old one. If I skip it, someone who already knew my session id before I signed in would hold a signed-in session on my movie app, which is called session fixation.
+`$fillable` only filters mass assignment, which means an array handed to `create`, `fill` or `update`. In Tinker I set `$u->role = 'admin'` as a single property and called `save()`, so there was no array to filter. `$fillable` guards my `User` model against data arriving from a request, such as a hidden `role` field added to my register form.
 
-F3: Why does a failed login use the same message for a wrong password and an unknown email?
+3. A signed-in non-admin typing your create address gets a 403. A guest typing the same address gets your login page. Say which layer produced each response, and why the two are deliberately different.
 
-My login says "The provided credentials do not match our records" for both cases. If it said "no such email", a stranger could guess emails one by one and learn who is registered in my app, but this message tells a real user to check both fields and tells a stranger nothing.
+The guest is stopped by the `auth` middleware on `movies.create`, which redirects to my `login` route before the controller runs. The signed-in non-admin passes the middleware, then `Gate::authorize('create', Movie::class)` in `MovieController` asks `MoviePolicy`, which returns false and produces the 403. They are different because a guest can still fix the problem by logging in, while a signed-in non-admin is already known and the answer is still no.
 
-F4: Why do index and show stay public while create/edit/update/destroy use auth?
+4. Your list and detail pages are still open to everybody, and your policy says so. Explain why that is a decision and not something you forgot.
 
-My movie list is a catalogue, so visitors must be able to browse it and open a movie without an account. Only create, store, edit, update and destroy change my data, so only those five routes are behind the auth middleware.
+My movie list is a catalogue, so visitors need to browse it and open a movie without an account. That is why `viewAny()` and `view()` in `MoviePolicy` return true, and why `index` and `show` in `MovieController` have no authorize call.
 
-F5: You hid Add (and actions) for guests. Why is that not enough to secure those actions? What actually stops a stranger?
+5. The same rule is read by your controller and by your list page. What would go wrong if you had written that role check in both places by hand instead of in a policy?
 
-Hiding the Add button only changes what the page shows, but the address `/movies/create` still exists and a guest can type it. What actually stops a stranger is the `auth` middleware on those routes, which sends the guest to the login page before my controller runs.
+The role rule would exist in two places, and the copies could drift apart. If I changed the check in `MovieController` but forgot `movies/index.blade.php`, the page could show an Edit button that leads to a 403, or hide a button from someone who is allowed. With `MoviePolicy`, both the controller and `@can` ask the same method, so they always agree.
 
-F6: In screenshot 20 the route name was wrong. Why does auth middleware care that the route is named exactly login?
+6. What does SESSION_LIFETIME count, what does it not count, and why was there no warning before you found yourself logged out?
 
-When the auth middleware stops a guest, Laravel redirects to the route named `login`, not to a path. When I renamed my route to `signin`, Laravel could not find a route called `login`, so I got the "Route [login] not defined" error from a line I never wrote.
+`SESSION_LIFETIME` counts the minutes the session sits idle since my last request, and every request resets the clock. It does not count the time since I logged in. There was no warning because the server does not watch me, so it only finds out the session expired when I click a link and my next request arrives.

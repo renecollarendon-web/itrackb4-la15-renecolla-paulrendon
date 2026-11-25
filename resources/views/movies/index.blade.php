@@ -25,12 +25,17 @@
         <a href="{{ route('movies.index') }}" class="btn btn-secondary">Clear</a>
     </form>
 
-    <!-- E4: Add button, para sa signed-in lang -->
-    @auth
+    <!-- D1: Add button, walang record pa kaya class ang ipinapasa -->
+    @can('create', App\Models\Movie::class)
         <div class="mb-3">
             <a href="{{ route('movies.create') }}" class="btn btn-success">Add New Movie</a>
         </div>
-    @endauth
+    @endcan
+
+    <!-- D8: read-only line para sa lahat ng hindi pwedeng mag-add -->
+    @cannot('create', App\Models\Movie::class)
+        <p class="text-muted small">You are viewing this list in read-only mode.</p>
+    @endcannot
 
     <!-- Movies Table -->
     <table class="table table-striped table-bordered">
@@ -42,14 +47,19 @@
                 <th>Rating</th>
                 <th>Director</th>
                 <th>Year</th>
-                <th>Action</th>
+                {{-- D4: nakatago rin ang heading ng Action column --}}
+                @can('create', App\Models\Movie::class)
+                    <th>Action</th>
+                @endcan
             </tr>
         </thead>
         <tbody>
             @forelse ($movies as $movie)
                 <tr>
                     <td>{{ $movies->firstItem() + $loop->index }}</td>
-                    <td>{{ $movie->title }}</td>
+                    <td>
+                        <a href="{{ route('movies.show', $movie) }}" class="text-decoration-none">{{ $movie->title }}</a>
+                    </td>
                     <td>{{ $movie->genre->name }}</td>
                     <td>
                         {{ $movie->rating }}
@@ -59,20 +69,24 @@
                     </td>
                     <td>{{ $movie->director }}</td>
                     <td>{{ $movie->year }}</td>
-                    <td>
-                        <a href="{{ route('movies.show', $movie) }}" class="btn btn-primary btn-sm">View</a>
 
-                        {{-- E5: Edit at Delete, para sa signed-in lang --}}
-                        @auth
-                            <a href="{{ route('movies.edit', $movie) }}" class="btn btn-warning btn-sm">Edit</a>
+                    @can('create', App\Models\Movie::class)
+                        <td>
+                            {{-- D2: Edit, may record kaya $movie ang ipinapasa --}}
+                            @can('update', $movie)
+                                <a href="{{ route('movies.edit', $movie) }}" class="btn btn-warning btn-sm">Edit</a>
+                            @endcan
 
-                            <form action="{{ route('movies.destroy', $movie) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this movie?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>
-                        @endauth
-                    </td>
+                            {{-- D3: buong Delete form ang nasa loob ng @can --}}
+                            @can('delete', $movie)
+                                <form action="{{ route('movies.destroy', $movie) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this movie?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            @endcan
+                        </td>
+                    @endcan
                 </tr>
             @empty
                 <tr>
